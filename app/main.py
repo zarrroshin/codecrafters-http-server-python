@@ -93,6 +93,27 @@ def handle_client(client_connection, client_address, directory):
                     b"HTTP/1.1 404 Not Found\r\n\r\n"
                 )
 
+        elif method =="POST":
+            if path.startswith("/files/"):
+                filename = path[len("/files/"):]
+                file_path = os.path.join(directory, filename)
+                try:
+                    body = data.split(b"\r\n\r\n",1)[1]
+                    with open(file_path,"wb") as f :
+                        f.write(body)
+                    client_connection.sendall(
+                                        b"HTTP/1.1 201 Created\r\n\r\n"
+                                    )
+                except:
+                    client_connection.sendall(
+                                        b"HTTP/1.1 404 Not Found\r\n\r\n"
+                                    )
+
+
+                
+
+                
+            
         else:
             client_connection.sendall(
                 b"HTTP/1.1 501 Not Implemented\r\n\r\n"
