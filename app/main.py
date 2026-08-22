@@ -32,17 +32,36 @@ def handle_client(client_connection, client_address, directory):
                 )
 
             elif path.startswith("/echo/"):
+                accept_encoding = ""
+
+                for line in request_lines[1:]:
+                    if line == "":
+                        break
+
+                    if line.lower().startswith("accept-encoding:"):
+                        accept_encoding = line.split(":", 1)[1].strip()
+                        break
+
                 echo_string = path[len("/echo/"):]
                 body = echo_string.encode("utf-8")
 
+                # Headerهای پایه، که همیشه باید باشند
                 headers = (
                     "HTTP/1.1 200 OK\r\n"
                     "Content-Type: text/plain\r\n"
+                )
+
+                # سرور ما فعلاً فقط gzip را می‌شناسد
+                if accept_encoding == "gzip":
+                    headers += "Content-Encoding: gzip\r\n"
+
+                headers += (
                     f"Content-Length: {len(body)}\r\n"
                     "\r\n"
-                ).encode("utf-8")
+                )
 
-                client_connection.sendall(headers + body)
+                client_connection.sendall(headers.encode("utf-8") + body)
+
 
             elif path.startswith("/files/"):
                 filename = path[len("/files/"):]
