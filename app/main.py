@@ -2,6 +2,9 @@ import socket
 import threading
 import argparse
 import os
+import gzip
+
+
 
 
 def handle_client(client_connection, client_address, directory):
@@ -57,6 +60,7 @@ def handle_client(client_connection, client_address, directory):
             # سرور فعلاً فقط gzip را پشتیبانی می‌کند
                 if "gzip" in accepted_encodings:
                     headers += "Content-Encoding: gzip\r\n"
+                    body = gzip.compress(body)
 
                 headers += (
                     f"Content-Length: {len(body)}\r\n"
