@@ -1,8 +1,10 @@
 import socket
 import threading
+import argparse
+import os
 
 
-def handle_client(client_connection, client_address):
+def handle_client(client_connection, client_address, directory):
     try:
         data = client_connection.recv(1024)
 
@@ -42,10 +44,31 @@ def handle_client(client_connection, client_address):
 
                 client_connection.sendall(headers + body)
 
+            elif path.startswith("/files/"):
+                filename = path[len("/files/"):]
+                file_path = os.path.join(directory, filename)
+
+                try:
+                    with open(file_path, "rb") as f:
+                        content = f.read()
+
+                    headers = (
+                        "HTTP/1.1 200 OK\r\n"
+                        "Content-Type: application/octet-stream\r\n"
+                        f"Content-Length: {len(content)}\r\n"
+                        "\r\n"
+                    ).encode("utf-8")
+
+                    client_connection.sendall(headers + content)
+
+                except FileNotFoundError:
+                    client_connection.sendall(
+                        b"HTTP/1.1 404 Not Found\r\n\r\n"
+                    )
+
             elif path == "/user-agent":
                 user_agent = ""
 
-                # از خط ۱ شروع می‌کنیم، چون خط ۰ request line است
                 for line in request_lines[1:]:
                     if line == "":
                         break
@@ -76,24 +99,33 @@ def handle_client(client_connection, client_address):
             )
 
     finally:
-        # فقط اتصال همان client بسته می‌شود
         client_connection.close()
 
 
 def main():
-    print("Server is running on localhost:4221")
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--directory",
+        default=None,
+        help="Directory used for serving files",
+    )
+
+    args = parser.parse_args()
+    directory = args.directory
+
+    print(f"Server is running on localhost:4221")
+    print(f"Files directory: {directory}")
 
     server_socket = socket.create_server(("localhost", 4221))
 
     try:
         while True:
-            # سرور دائماً اتصال‌های جدید را قبول می‌کند
             client_connection, client_address = server_socket.accept()
 
-            # رسیدگی به هر client در thread مستقل
             thread = threading.Thread(
                 target=handle_client,
-                args=(client_connection, client_address),
+                args=(client_connection, client_address, directory),
                 daemon=True,
             )
             thread.start()
