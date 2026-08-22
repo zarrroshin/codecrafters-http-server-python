@@ -41,18 +41,21 @@ def handle_client(client_connection, client_address, directory):
                     if line.lower().startswith("accept-encoding:"):
                         accept_encoding = line.split(":", 1)[1].strip()
                         break
+                accepted_encodings = [
+                    encoding.strip()
+                    for encoding in accept_encoding.split(",")
+                ]
 
                 echo_string = path[len("/echo/"):]
                 body = echo_string.encode("utf-8")
 
-                # Headerهای پایه، که همیشه باید باشند
                 headers = (
                     "HTTP/1.1 200 OK\r\n"
                     "Content-Type: text/plain\r\n"
                 )
 
-                # سرور ما فعلاً فقط gzip را می‌شناسد
-                if accept_encoding == "gzip":
+            # سرور فعلاً فقط gzip را پشتیبانی می‌کند
+                if "gzip" in accepted_encodings:
                     headers += "Content-Encoding: gzip\r\n"
 
                 headers += (
@@ -64,26 +67,26 @@ def handle_client(client_connection, client_address, directory):
 
 
             elif path.startswith("/files/"):
-                filename = path[len("/files/"):]
-                file_path = os.path.join(directory, filename)
+                        filename = path[len("/files/"):]
+                        file_path = os.path.join(directory, filename)
 
-                try:
-                    with open(file_path, "rb") as f:
-                        content = f.read()
+                        try:
+                            with open(file_path, "rb") as f:
+                                content = f.read()
 
-                    headers = (
-                        "HTTP/1.1 200 OK\r\n"
-                        "Content-Type: application/octet-stream\r\n"
-                        f"Content-Length: {len(content)}\r\n"
-                        "\r\n"
-                    ).encode("utf-8")
+                            headers = (
+                                "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: application/octet-stream\r\n"
+                                f"Content-Length: {len(content)}\r\n"
+                                "\r\n"
+                            ).encode("utf-8")
 
-                    client_connection.sendall(headers + content)
+                            client_connection.sendall(headers + content)
 
-                except FileNotFoundError:
-                    client_connection.sendall(
-                        b"HTTP/1.1 404 Not Found\r\n\r\n"
-                    )
+                        except FileNotFoundError:
+                            client_connection.sendall(
+                                b"HTTP/1.1 404 Not Found\r\n\r\n"
+                            )
 
             elif path == "/user-agent":
                 user_agent = ""
